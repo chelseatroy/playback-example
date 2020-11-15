@@ -1,6 +1,12 @@
 import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
-import {StyleSheet, TouchableOpacity} from 'react-native';
+import {
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    Keyboard
+} from 'react-native';
 
 import Colors from '../constants/Colors';
 import {Text, View} from './Themed';
@@ -13,6 +19,7 @@ export default class EditScreenInfo extends React.Component {
         playbackInstance: null,
         currentIndex: 0,
         volume: 1.0,
+        rate: 1.0,
         isBuffering: false
     }
 
@@ -35,12 +42,12 @@ export default class EditScreenInfo extends React.Component {
     }
 
     async loadAudio() {
-        const {currentIndex, isPlaying, volume} = this.state
+        const {isPlaying, volume} = this.state
 
         try {
             const playbackInstance = new Audio.Sound()
             const source = {
-                uri: 'https://ia600204.us.archive.org/11/items/hamlet_0911_librivox/hamlet_act5_shakespeare.mp3'
+                uri: 'http://k007.kiwi6.com/hotlink/z019vpcym9/Coffee_Medium_roast_...mp3'
             }
 
             const status = {
@@ -65,30 +72,56 @@ export default class EditScreenInfo extends React.Component {
     render() {
         return (
             <View>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+
                 <View style={styles.getStartedContainer}>
-                    <TouchableOpacity onPress={this.beginZeMetronome.bind(this)} style={styles.button}>
+                    <Text
+                        style={styles.label}
+                        lightColor="rgba(0,0,0,0.8)"
+                        darkColor="rgba(255,255,255,0.8)">
+                        How fast should the metronome play? (1 is normal speed)
+                    </Text>
+                    <TextInput style = {styles.rateInput}
+                        keyboardType = 'numeric'
+                        onChangeText = {(text)=> this.onRateChanged(text)}
+                        defaultValue = { "1.0" }
+                    />
+                    <TouchableOpacity onPress={this.playOrPauseMetronome.bind(this)} style={styles.button}>
                         <Text
                             style={styles.buttonText}
                             lightColor="rgba(0,0,0,0.8)"
                             darkColor="rgba(255,255,255,0.8)">
                             {this.state.isPlaying ?
                                 "Pauze ze metronome!"
-                                : (
-                                    "Begin ze metronome!"
-                                )}
+                                :
+                                "Begin ze metronome!"
+                                }
                         </Text>
                     </TouchableOpacity>
 
                 </View>
-
+                </TouchableWithoutFeedback>
             </View>
         );
 
     }
 
-    async beginZeMetronome() {
-        const {isPlaying, playbackInstance} = this.state
+    async onRateChanged(newRate) {
+        const {playbackInstance, isPlaying} = this.state
 
+        if (isPlaying) {
+            await playbackInstance.pauseAsync()
+        }
+        this.setState({
+            isPlaying: false,
+            rate: parseFloat(newRate)
+        })
+    }
+
+    async playOrPauseMetronome() {
+        const {isPlaying, playbackInstance, rate} = this.state
+
+        await playbackInstance.setStatusAsync({ rate: rate, shouldCorrectPitch: true })
         isPlaying ? await playbackInstance.pauseAsync() : await playbackInstance.playAsync()
 
         this.setState({isPlaying: !isPlaying})
@@ -152,7 +185,20 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 20,
         fontWeight: "bold",
-
+    },
+    label: {
+        color: 'green',
+        fontSize: 16,
+        padding: 10,
+        textAlign: 'center'
+    },
+    rateInput: {
+        height: 40,
+        width: 60,
+        borderColor: 'green',
+        borderWidth: 2,
+        borderRadius: 10,
+        textAlign: 'center'
     },
     helpContainer: {
         marginTop: 15,
