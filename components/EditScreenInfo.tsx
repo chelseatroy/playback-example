@@ -3,59 +3,97 @@ import React from 'react';
 import {StyleSheet, TouchableOpacity} from 'react-native';
 
 import Colors from '../constants/Colors';
-import {MonoText} from './StyledText';
 import {Text, View} from './Themed';
+import {Audio} from 'expo-av';
 
-export default function EditScreenInfo({path}: { path: string }) {
-    return (
-        <View>
-            <View style={styles.getStartedContainer}>
-                <Text
-                    style={styles.getStartedText}
-                    lightColor="rgba(0,0,0,0.8)"
-                    darkColor="rgba(255,255,255,0.8)">
-                    Open up the code for this screen:
-                </Text>
 
-                <View
-                    style={[styles.codeHighlightContainer, styles.homeScreenFilename]}
-                    darkColor="rgba(255,255,255,0.05)"
-                    lightColor="rgba(0,0,0,0.05)">
-                    <MonoText>{path}</MonoText>
+export default class EditScreenInfo extends React.Component {
+    state = {
+        isPlaying: false,
+        playbackInstance: null,
+        currentIndex: 0,
+        volume: 1.0,
+        isBuffering: false
+    }
+
+    async componentDidMount() {
+        try {
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: false,
+                interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
+                playsInSilentModeIOS: true,
+                interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+                shouldDuckAndroid: true,
+                staysActiveInBackground: true,
+                playThroughEarpieceAndroid: true
+            })
+
+            this.loadAudio()
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    async loadAudio() {
+        const {currentIndex, isPlaying, volume} = this.state
+
+        try {
+            const playbackInstance = new Audio.Sound()
+            const source = {
+                uri: 'https://ia600204.us.archive.org/11/items/hamlet_0911_librivox/hamlet_act5_shakespeare.mp3'
+            }
+
+            const status = {
+                shouldPlay: isPlaying,
+                volume
+            }
+
+            playbackInstance.setOnPlaybackStatusUpdate(this.onPlaybackStatusUpdate)
+            await playbackInstance.loadAsync(source, status, false)
+            this.setState({playbackInstance})
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    onPlaybackStatusUpdate = status => {
+        this.setState({
+            isBuffering: status.isBuffering
+        })
+    }
+
+    render() {
+        return (
+            <View>
+                <View style={styles.getStartedContainer}>
+                    <TouchableOpacity onPress={this.beginZeMetronome.bind(this)} style={styles.button}>
+                        <Text
+                            style={styles.buttonText}
+                            lightColor="rgba(0,0,0,0.8)"
+                            darkColor="rgba(255,255,255,0.8)">
+                            {this.state.isPlaying ?
+                                "Pauze ze metronome!"
+                                : (
+                                    "Begin ze metronome!"
+                                )}
+                        </Text>
+                    </TouchableOpacity>
+
                 </View>
 
-                <TouchableOpacity onPress={beginZeMetronome} style={styles.button}>
-                    <Text
-                        style={styles.buttonText}
-                        lightColor="rgba(0,0,0,0.8)"
-                        darkColor="rgba(255,255,255,0.8)">
-                        Begin ze metronome!
-                    </Text>
-                </TouchableOpacity>
-
             </View>
+        );
 
-            <View style={styles.helpContainer}>
-                <TouchableOpacity onPress={handleHelpPress} style={styles.helpLink}>
-                    <Text style={styles.helpLinkText} lightColor={Colors.light.tint}>
-                        Tap here if your app doesn't automatically update after making changes
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-}
+    }
 
-function handleHelpPress() {
-    WebBrowser.openBrowserAsync(
-        'https://docs.expo.io/get-started/create-a-new-app/#opening-the-app-on-your-phonetablet'
-    );
-}
+    async beginZeMetronome() {
+        const {isPlaying, playbackInstance} = this.state
 
-function beginZeMetronome() {
-    WebBrowser.openBrowserAsync(
-        'https://docs.expo.io/get-started/create-a-new-app/#opening-the-app-on-your-phonetablet'
-    );
+        isPlaying ? await playbackInstance.pauseAsync() : await playbackInstance.playAsync()
+
+        this.setState({isPlaying: !isPlaying})
+    }
+
 }
 
 const styles = StyleSheet.create({
